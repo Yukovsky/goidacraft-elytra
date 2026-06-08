@@ -52,6 +52,10 @@ public final class ElytraEventHandler {
         // Край — запрет надевания элитры через ПКМ из хотбара (без кулдауна: явное действие игрока).
         if (dim == Level.END && isRestrictedElytra(stack, player)) {
             event.setCanceled(true);
+            // КРИТИЧНО: при отмене use() сервер пропускает свой sendAllDataToRemote()
+            // (ServerPlayerGameMode.useItem), поэтому клиент остаётся с оптимистично надетой
+            // «фантомной» элитрой. Форсим полный ресинк инвентаря, чтобы откатить предсказание.
+            forceResync(player);
             actionBar(player, "§c[Элитры] В Крае элитры не работают!");
             return;
         }
@@ -59,6 +63,8 @@ public final class ElytraEventHandler {
         // Обычный мир — запрет фейерверка в полёте.
         if (dim == Level.OVERWORLD && player.isFallFlying() && stack.is(Items.FIREWORK_ROCKET)) {
             event.setCanceled(true);
+            // Клиент предсказал расход ракеты — возвращаем верное состояние стака.
+            forceResync(player);
             if (NotifyCooldowns.canNotify(player, "fw", ElytraConfig.NOTIFY_COOLDOWN_TICKS.get())) {
                 actionBar(player, "§c[Элитры] Использование фейерверков на элитрах запрещено!");
             }
@@ -171,8 +177,15 @@ public final class ElytraEventHandler {
         if (!player.getInventory().add(copy)) {
             player.drop(copy, false);
         }
-        player.inventoryMenu.broadcastChanges();
+        // Безусловный ресинк: гарантирует, что клиент увидит пустой слот нагрудника
+        // и не сможет предсказывать полёт по фантомной элитре.
+        forceResync(player);
         return true;
+    }
+
+    /** Форсированный полный ресинк инвентаря игроку (перезаписывает клиентское предсказание). */
+    private static void forceResync(ServerPlayer player) {
+        player.inventoryMenu.sendAllDataToRemote();
     }
 
     /**
