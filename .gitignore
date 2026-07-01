@@ -21,3 +21,7 @@ out/
 
 # OS
 *.log
+
+# Local editor/session state
+.claude/
+memory/
