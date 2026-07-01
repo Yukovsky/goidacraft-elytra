@@ -8,8 +8,8 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Серверный конфиг ({@code config/goidacraft_elytra-server.toml}).
- * Все значения горячо перечитываются на загрузке/перезагрузке конфига.
+ * Server config ({@code config/goidacraft_elytra-server.toml}).
+ * All values are hot-reloaded on config load/reload.
  */
 public final class ElytraConfig {
 
@@ -32,7 +32,7 @@ public final class ElytraConfig {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
 
         ELYTRA_IDS = b
-                .comment("Список registry-id предметов, считающихся ограничиваемыми элитрами (точное совпадение).")
+                .comment("List of item registry ids treated as restricted elytras (exact match).")
                 .defineListAllowEmpty("elytraIds",
                         DEFAULT_IDS,
                         () -> "minecraft:elytra",
@@ -40,22 +40,22 @@ public final class ElytraConfig {
 
         AUTO_DETECT_BY_NAME = b
                 .comment(
-                        "Если true — любой предмет, в registry-id которого есть слово 'elytra',",
-                        "считается элитрой, НО только если он реально функционирует как элитра (canElytraFly).",
-                        "Предметы с 'elytra' в имени, но без функционала планирования, игнорируются.")
+                        "If true, any item whose registry id contains the word 'elytra'",
+                        "is treated as an elytra, BUT only if it actually functions as one (canElytraFly).",
+                        "Items with 'elytra' in the name but without gliding functionality are ignored.")
                 .define("autoDetectByName", false);
 
         MAX_HORIZONTAL = b
-                .comment("Максимальный модуль горизонтальной скорости в обычном мире (блоков/тик). Блокирует разгон.")
+                .comment("Maximum horizontal speed magnitude in the Overworld (blocks/tick). Blocks acceleration.")
                 .defineInRange("maxHorizontal", 1.0, 0.0, 100.0);
 
         MAX_VERTICAL_UP = b
-                .comment("Потолок вертикальной скорости: vy зажимается до min(vy, это значение).",
-                        "Должно быть <= 0, чтобы гарантировать снижение (планирование вниз).")
+                .comment("Vertical speed ceiling: vy is clamped to min(vy, this value).",
+                        "Must be <= 0 to guarantee descent (gliding downward).")
                 .defineInRange("maxVerticalUp", -0.05, -100.0, 100.0);
 
         NOTIFY_COOLDOWN_TICKS = b
-                .comment("Кулдаун между повторными сообщениями игроку, в тиках (20 = 1 секунда).")
+                .comment("Cooldown between repeated notifications to the player, in ticks (20 = 1 second).")
                 .defineInRange("notifyCooldownTicks", 40, 0, 1200);
 
         SPEC = b.build();
@@ -64,7 +64,7 @@ public final class ElytraConfig {
     private ElytraConfig() {
     }
 
-    /** Перестроить кэш id из конфига. Вызывается на загрузке/перезагрузке. */
+    /** Rebuilds the id cache from the config. Called on load/reload. */
     public static void rebuildCache() {
         Set<String> set = new HashSet<>();
         for (String s : ELYTRA_IDS.get()) {
@@ -75,7 +75,7 @@ public final class ElytraConfig {
         idCache = set;
     }
 
-    /** Явный список id (lower-case). */
+    /** Explicit list of ids (lower-case). */
     public static Set<String> explicitIds() {
         return idCache;
     }

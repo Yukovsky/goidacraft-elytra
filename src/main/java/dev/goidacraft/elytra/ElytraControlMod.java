@@ -7,17 +7,17 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 
 /**
- * Серверный мод управления элитрами по измерениям (NeoForge 1.21.1).
+ * Server-side per-dimension elytra control mod (NeoForge 1.21.1).
  *
- * <p>Меняет поведение элитр:
+ * <p>Changes elytra behaviour:
  * <ul>
- *     <li>Край (the_end) — элитры полностью запрещены;</li>
- *     <li>Обычный мир (overworld) — только планирование вниз, без разгона и фейерверков;</li>
- *     <li>Ад (the_nether) — без ограничений.</li>
+ *     <li>The End (the_end) — elytras are completely forbidden;</li>
+ *     <li>Overworld (overworld) — gliding downward only, no acceleration or fireworks;</li>
+ *     <li>The Nether (the_nether) — unrestricted.</li>
  * </ul>
  *
- * Вся логика выполняется на серверном тике, поэтому работает корректно даже при низком TPS
- * и не требует клиентских модов. Значения настраиваются в {@code config/goidacraft_elytra-server.toml}.
+ * All logic runs on the server tick, so it works correctly even at low TPS
+ * and requires no client-side mods. Values are configurable in {@code config/goidacraft_elytra-server.toml}.
  */
 @Mod(ElytraControlMod.MOD_ID)
 public class ElytraControlMod {

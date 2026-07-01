@@ -9,8 +9,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Транзиентное состояние per-player: анти-спам сообщений и детект начала планирования.
- * Заменяет хранение кулдаунов в persistentData (NBT) из старого KubeJS-скрипта.
+ * Transient per-player state: notification anti-spam and glide-start detection.
+ * Replaces storing cooldowns in persistentData (NBT) from the old KubeJS script.
  */
 public final class NotifyCooldowns {
 
@@ -21,8 +21,8 @@ public final class NotifyCooldowns {
     }
 
     /**
-     * @return true, если с момента последнего сообщения с этим ключом прошло >= cooldownTicks
-     *         (и тогда таймер обновляется).
+     * @return true if at least cooldownTicks have passed since the last notification with this key
+     *         (in which case the timer is reset).
      */
     public static boolean canNotify(ServerPlayer player, String key, int cooldownTicks) {
         long now = player.serverLevel().getGameTime();
@@ -36,9 +36,9 @@ public final class NotifyCooldowns {
     }
 
     /**
-     * Обновляет флаг полёта и сообщает, был ли это переход «не летел -> начал планировать».
+     * Updates the flight flag and reports whether this was a "not flying -> started gliding" transition.
      *
-     * @return true только в тот тик, когда игрок начал планирование.
+     * @return true only on the tick when the player started gliding.
      */
     public static boolean startedFlying(ServerPlayer player, boolean isFlyingNow) {
         UUID id = player.getUUID();
@@ -51,7 +51,7 @@ public final class NotifyCooldowns {
         return isFlyingNow && !was;
     }
 
-    /** Очистка состояния при выходе игрока. */
+    /** Clears state when a player logs out. */
     public static void clear(UUID id) {
         LAST_NOTIFY.remove(id);
         WAS_FALL_FLYING.remove(id);

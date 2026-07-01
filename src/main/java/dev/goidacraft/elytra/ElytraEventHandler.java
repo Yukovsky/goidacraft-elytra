@@ -22,11 +22,11 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import java.util.Locale;
 
 /**
- * Серверные обработчики поведения элитр. Три слоя:
+ * Server-side elytra behaviour handlers. Three layers:
  * <ol>
- *     <li>превентивный ПКМ (надевание элитры / запуск фейерверка);</li>
- *     <li>реакция на смену экипировки (любой способ надевания в Крае);</li>
- *     <li>тик-страховка (кламп скорости, остановка полёта, принудительное снятие).</li>
+ *     <li>preventive right-click interception (equipping the elytra / launching a firework);</li>
+ *     <li>equipment-change reaction (catches any other way to equip it in the End);</li>
+ *     <li>per-tick safety net (speed clamping, stopping flight, forced unequip).</li>
  * </ol>
  */
 @EventBusSubscriber(modid = ElytraControlMod.MOD_ID)
@@ -36,7 +36,7 @@ public final class ElytraEventHandler {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Слой 1 — превентивный ПКМ
+    // Layer 1 — preventive right-click interception
     // ─────────────────────────────────────────────────────────────────────────
     @SubscribeEvent
     public static void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
@@ -49,21 +49,21 @@ public final class ElytraEventHandler {
         ResourceKey<Level> dim = player.level().dimension();
         ItemStack stack = event.getItemStack();
 
-        // Край — запрет надевания элитры через ПКМ из хотбара (без кулдауна: явное действие игрока).
+        // End — block equipping the elytra via right-click from the hotbar (no cooldown: explicit player action).
         if (dim == Level.END && isRestrictedElytra(stack, player)) {
             event.setCanceled(true);
-            // КРИТИЧНО: при отмене use() сервер пропускает свой sendAllDataToRemote()
-            // (ServerPlayerGameMode.useItem), поэтому клиент остаётся с оптимистично надетой
-            // «фантомной» элитрой. Форсим полный ресинк инвентаря, чтобы откатить предсказание.
+            // CRITICAL: when use() is cancelled the server skips its own sendAllDataToRemote()
+            // (ServerPlayerGameMode.useItem), so the client is left with an optimistically equipped
+            // "phantom" elytra. Force a full inventory resync to roll back the client prediction.
             forceResync(player);
             actionBar(player, "§c[Элитры] В Крае элитры не работают!");
             return;
         }
 
-        // Обычный мир — запрет фейерверка в полёте.
+        // Overworld — forbid fireworks while gliding.
         if (dim == Level.OVERWORLD && player.isFallFlying() && stack.is(Items.FIREWORK_ROCKET)) {
             event.setCanceled(true);
-            // Клиент предсказал расход ракеты — возвращаем верное состояние стака.
+            // The client already predicted the rocket being consumed — restore the correct stack state.
             forceResync(player);
             if (NotifyCooldowns.canNotify(player, "fw", ElytraConfig.NOTIFY_COOLDOWN_TICKS.get())) {
                 actionBar(player, "§c[Элитры] Использование фейерверков на элитрах запрещено!");
@@ -72,7 +72,7 @@ public final class ElytraEventHandler {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Слой 2 — реакция на надевание (drag, shift-клик, раздатчик, /item, другие моды)
+    // Layer 2 — equip reaction (drag, shift-click, dispenser, /item, other mods)
     // ─────────────────────────────────────────────────────────────────────────
     @SubscribeEvent
     public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
@@ -94,7 +94,7 @@ public final class ElytraEventHandler {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Слой 3 — тик-страховка
+    // Layer 3 — per-tick safety net
     // ─────────────────────────────────────────────────────────────────────────
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
@@ -106,7 +106,7 @@ public final class ElytraEventHandler {
         boolean started = NotifyCooldowns.startedFlying(player, flying);
         ResourceKey<Level> dim = player.level().dimension();
 
-        // ── Край ──
+        // ── End ──
         if (dim == Level.END) {
             if (flying) {
                 player.stopFallFlying();
@@ -122,7 +122,7 @@ public final class ElytraEventHandler {
             return;
         }
 
-        // ── Обычный мир ──
+        // ── Overworld ──
         if (dim == Level.OVERWORLD && flying) {
             Vec3 v = player.getDeltaMovement();
             double maxUp = ElytraConfig.MAX_VERTICAL_UP.get();
@@ -142,19 +142,19 @@ public final class ElytraEventHandler {
             }
 
             player.setDeltaMovement(vx, vy, vz);
-            player.hurtMarked = true; // форс-синк скорости на клиент (ключевое отличие от KubeJS-скрипта)
+            player.hurtMarked = true; // force-sync velocity to the client (the key difference from the KubeJS script)
 
             if (boosted) {
                 if (NotifyCooldowns.canNotify(player, "ow_boost", ElytraConfig.NOTIFY_COOLDOWN_TICKS.get())) {
                     actionBar(player, "§e[Элитры] Ускорение заблокировано!");
                 }
             } else if (started) {
-                // Одноразовая подсказка в момент начала планирования (action bar сам гаснет ~через 2-3 c).
+                // One-time hint when gliding starts (the action bar fades out on its own after ~2-3 s).
                 actionBar(player, "§7[Элитры] Только планирование вниз");
             }
         }
 
-        // ── Ад ── без ограничений.
+        // ── Nether ── unrestricted.
     }
 
     @SubscribeEvent
@@ -163,10 +163,10 @@ public final class ElytraEventHandler {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Хелперы
+    // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Снять элитру с CHEST-слота и вернуть в инвентарь (или дропнуть). */
+    /** Unequip the elytra from the CHEST slot and return it to the inventory (or drop it). */
     private static boolean unequip(ServerPlayer player) {
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         if (!isRestrictedElytra(chest, player)) {
@@ -177,21 +177,21 @@ public final class ElytraEventHandler {
         if (!player.getInventory().add(copy)) {
             player.drop(copy, false);
         }
-        // Безусловный ресинк: гарантирует, что клиент увидит пустой слот нагрудника
-        // и не сможет предсказывать полёт по фантомной элитре.
+        // Unconditional resync: guarantees the client sees an empty chest slot
+        // and can't predict flight based on a phantom elytra.
         forceResync(player);
         return true;
     }
 
-    /** Форсированный полный ресинк инвентаря игроку (перезаписывает клиентское предсказание). */
+    /** Forces a full inventory resync to the player (overwrites client-side prediction). */
     private static void forceResync(ServerPlayer player) {
         player.inventoryMenu.sendAllDataToRemote();
     }
 
     /**
-     * Является ли предмет ограничиваемой элитрой:
-     * (1) точное совпадение id из конфига, либо
-     * (2) автодетект по слову 'elytra' в id + реальный функционал элитры.
+     * Whether an item counts as a restricted elytra:
+     * (1) exact id match from the config, or
+     * (2) auto-detect by the word 'elytra' in the id + actually functions as an elytra.
      */
     static boolean isRestrictedElytra(ItemStack stack, LivingEntity entity) {
         if (stack == null || stack.isEmpty()) {
@@ -209,7 +209,7 @@ public final class ElytraEventHandler {
         return false;
     }
 
-    /** Реально ли предмет даёт полёт-планирование (отсекает посторонние предметы с 'elytra' в имени). */
+    /** Whether the item actually grants gliding flight (filters out unrelated items with 'elytra' in the name). */
     private static boolean functionsAsElytra(ItemStack stack, LivingEntity entity) {
         if (entity == null) {
             return false;

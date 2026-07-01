@@ -35,7 +35,7 @@ neoForge {
     }
 }
 
-// Подстановка свойств в neoforge.mods.toml при сборке ресурсов.
+// Substitutes properties into neoforge.mods.toml when resources are processed.
 var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
@@ -50,7 +50,7 @@ var generateModMetadata = tasks.register('generateModMetadata', ProcessResources
             mod_authors            : mod_authors,
     ]
     inputs.properties replaceProperties
-    // Кириллица в шаблоне — читаем/пишем строго в UTF-8 (иначе mojibake).
+    // Cyrillic text in the template — must read/write strictly as UTF-8 (otherwise mojibake).
     filteringCharset = 'UTF-8'
     expand replaceProperties
     from "src/main/templates"

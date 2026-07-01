@@ -2,7 +2,7 @@
 
 # 🪂 GoidaCraft Elytra Control
 
-**Серверный мод для NeoForge, который решает, где и как можно летать на элитрах.**
+**A server-side NeoForge mod that decides where and how players are allowed to glide on elytras.**
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1-brightgreen)](https://www.minecraft.net/)
@@ -11,105 +11,108 @@
 
 </div>
 
-Мод целиком серверный: клиентам не нужно ничего ставить, обычный ванильный лаунчер спокойно
-подключается к серверу. Вся логика проверок и коррекции скорости выполняется на серверном тике —
-поведение стабильно даже при просадках TPS.
+The mod is entirely server-side: clients don't need to install anything, a plain vanilla launcher
+connects just fine. All checks and speed corrections run on the server tick, so behaviour stays
+correct even when TPS drops.
 
-## Содержание
+## Contents
 
-- [Зачем это нужно](#зачем-это-нужно)
-- [Поведение по измерениям](#поведение-по-измерениям)
-- [Сообщения игроку](#сообщения-игроку)
-- [Конфигурация](#конфигурация)
-- [Установка](#установка)
-- [Сборка из исходников](#сборка-из-исходников)
-- [Как это устроено внутри](#как-это-устроено-внутри)
-- [Лицензия](#лицензия)
+- [Why this exists](#why-this-exists)
+- [Behaviour per dimension](#behaviour-per-dimension)
+- [Player-facing messages](#player-facing-messages)
+- [Configuration](#configuration)
+- [Installation](#installation)
+- [Building from source](#building-from-source)
+- [How it works internally](#how-it-works-internally)
+- [License](#license)
 
-## Зачем это нужно
+## Why this exists
 
-На выживальческих серверах элитры в Крае обесценивают дальнобойные полёты и делают безопасными
-зоны, которые должны быть рискованными, а в обычном мире — превращают перемещение в бесконтрольный
-разгон фейерверками. Мод точечно правит это поведение по измерениям, не трогая элитры как предмет —
-их всё ещё можно крафтить, чинить и носить как броню.
+On survival servers, elytras in the End trivialize long-range flight and turn zones that are
+supposed to be risky into safe ones, while in the Overworld they turn travel into unrestrained
+firework-boosted speedrunning. This mod surgically corrects that behaviour per dimension without
+touching the item itself — elytras can still be crafted, repaired, and worn as armor.
 
-Изначально это была связка скриптов KubeJS (сохранилась в истории репозитория), но у неё была
-фундаментальная проблема: клиент мог обогнать сервер в предсказании движения и на секунду-другую
-получить «фантомный» полёт. Java-мод устраняет это форс-ресинком состояния сущности на сервере.
+The original implementation was a pair of KubeJS scripts (preserved in the repository's history),
+but it had a fundamental flaw: the client could get ahead of the server in movement prediction and
+briefly end up with a "phantom" flight state. The Java mod fixes this by forcing a server-side
+entity state resync.
 
-## Поведение по измерениям
+## Behaviour per dimension
 
-| Измерение | Что происходит |
+| Dimension | What happens |
 |---|---|
-| 🌌 **Край** (`minecraft:the_end`) | Элитры запрещены полностью и без исключений: ПКМ, shift-клик, перетаскивание в слот, раздатчик, `/item`, другие моды — сервер принудительно снимает элитру и мгновенно останавливает полёт. |
-| 🌍 **Обычный мир** (`minecraft:overworld`) | Летать можно, но только вниз: вертикальная скорость всегда слегка отрицательна, горизонтальная — ограничена потолком. Фейерверки в полёте запрещены, так что разогнаться нельзя. |
-| 🔥 **Ад** (`minecraft:the_nether`) | Без ограничений — элитры работают как обычно. |
+| 🌌 **The End** (`minecraft:the_end`) | Elytras are forbidden entirely, with no exceptions: right-click, shift-click, drag into slot, dispenser, `/item`, other mods — the server forcibly unequips the elytra and instantly stops flight. |
+| 🌍 **Overworld** (`minecraft:overworld`) | Flying is allowed, but gliding-down only: vertical speed is always slightly negative, horizontal speed is capped. Fireworks in flight are forbidden, so there's no way to accelerate. |
+| 🔥 **The Nether** (`minecraft:the_nether`) | No restrictions — elytras behave normally. |
 
-## Сообщения игроку
+## Player-facing messages
 
-Все уведомления — через action bar, без спама в чат:
+All notifications go through the action bar, with no chat spam. The mod ships with Russian
+messages by default (the source server is Russian-speaking) — override them in your own resource
+pack / translation layer if you need another language:
 
-| Ситуация | Сообщение |
+| Situation | Message |
 |---|---|
-| Край, попытка надеть/взлететь | `[Элитры] В Крае надевать элитры запрещено!` |
-| Край, ПКМ элитрой из хотбара | `[Элитры] В Крае элитры не работают!` |
-| Обычный мир, попытка разгона | `[Элитры] Ускорение заблокировано!` |
-| Обычный мир, начало планирования (один раз) | `[Элитры] Только планирование вниз` |
-| Обычный мир, фейерверк в полёте | `[Элитры] Использование фейерверков на элитрах запрещено!` |
+| End, tries to equip/fly | `[Элитры] В Крае надевать элитры запрещено!` |
+| End, right-clicks elytra from hotbar | `[Элитры] В Крае элитры не работают!` |
+| Overworld, tries to accelerate | `[Элитры] Ускорение заблокировано!` |
+| Overworld, starts gliding (once) | `[Элитры] Только планирование вниз` |
+| Overworld, firework while flying | `[Элитры] Использование фейерверков на элитрах запрещено!` |
 
-Повторные уведомления сдерживаются кулдауном (~2 секунды); прямое действие игрока (ПКМ элитрой) не
-глушится вообще, чтобы отклик был мгновенным.
+Repeated notifications are throttled by a cooldown (~2 seconds); a direct player action
+(right-clicking the elytra) is never throttled, so the response stays instant.
 
-## Конфигурация
+## Configuration
 
-Файл `config/goidacraft_elytra-server.toml`, синхронизируется с сервера на клиенты автоматически.
+File `config/goidacraft_elytra-server.toml`, auto-synced from the server to clients.
 
-| Ключ | По умолчанию | Описание |
+| Key | Default | Description |
 |---|---|---|
-| `elytraIds` | `minecraft:elytra`, `betterend:elytra_armored`, `betterend:elytra_crystalite` | Registry-id предметов, которые считаются элитрами (точное совпадение). |
-| `autoDetectByName` | `false` | Если `true`, элитрой считается любой предмет с `elytra` в id — но только если он реально даёт полёт (`canElytraFly`); прочие предметы не трогает. |
-| `maxHorizontal` | `1.0` | Максимальный модуль горизонтальной скорости в обычном мире, блоков/тик. |
-| `maxVerticalUp` | `-0.05` | Потолок вертикальной скорости (`vy = min(vy, значение)`); значение `≤ 0` гарантирует снижение. |
-| `notifyCooldownTicks` | `40` | Кулдаун повторных уведомлений в тиках (20 тиков = 1 секунда). |
+| `elytraIds` | `minecraft:elytra`, `betterend:elytra_armored`, `betterend:elytra_crystalite` | Registry ids treated as restricted elytras (exact match). |
+| `autoDetectByName` | `false` | If `true`, any item with `elytra` in its id is treated as an elytra — but only if it actually grants flight (`canElytraFly`); unrelated items are left alone. |
+| `maxHorizontal` | `1.0` | Maximum horizontal speed magnitude in the Overworld, blocks/tick. |
+| `maxVerticalUp` | `-0.05` | Vertical speed ceiling (`vy = min(vy, value)`); a value `≤ 0` guarantees descent. |
+| `notifyCooldownTicks` | `40` | Cooldown for repeated notifications, in ticks (20 ticks = 1 second). |
 
-## Установка
+## Installation
 
-1. Скачайте jar из [Releases](https://github.com/Yukovsky/goidacraft-elytra/releases) или соберите сами (см. ниже).
-2. Положите файл в `mods/` вашего сервера NeoForge 1.21.1.
-3. Запустите сервер один раз, чтобы сгенерировался конфиг, при необходимости отредактируйте его.
+1. Download the jar from [Releases](https://github.com/Yukovsky/goidacraft-elytra/releases), or build it yourself (see below).
+2. Drop the file into your NeoForge 1.21.1 server's `mods/` folder.
+3. Start the server once to generate the config, then edit it if needed.
 
-Для поддержки элитр из **Better End** дополнительно установите сам мод Better End — это
-опциональная зависимость, без неё всё остальное работает как обычно.
+To support **Better End** elytras, also install Better End itself — it's an optional dependency,
+everything else works fine without it.
 
-## Сборка из исходников
+## Building from source
 
-Требуется JDK 21.
+Requires JDK 21.
 
 ```bash
 ./gradlew build        # Linux/macOS
 .\gradlew.bat build    # Windows
 ```
 
-Готовый jar появится в `build/libs/goidacraft_elytra-<версия>.jar`.
+The finished jar lands in `build/libs/goidacraft_elytra-<version>.jar`.
 
-## Как это устроено внутри
+## How it works internally
 
-Проверки разнесены на три независимых слоя в `ElytraEventHandler`, чтобы перекрыть все пути,
-которыми элитра может оказаться в слоте нагрудника или начать разгон:
+The checks are split across three independent layers in `ElytraEventHandler`, to cover every path
+an elytra could take into the chestplate slot or start accelerating:
 
-1. **Превентивный перехват ПКМ** (`PlayerInteractEvent.RightClickItem`) — отменяет надевание
-   элитры в Крае и запуск фейерверка в полёте ещё до того, как действие применится.
-2. **Слежение за экипировкой** (`LivingEquipmentChangeEvent`) — ловит любой другой способ
-   надеть элитру в Крае: shift-клик, перетаскивание, раздатчики, сторонние моды.
-3. **Страховка на тике** (`PlayerTickEvent.Post`) — каждый тик клампит скорость в обычном мире
-   и подчищает то, что могло проскочить мимо первых двух слоёв в Крае.
+1. **Preventive right-click interception** (`PlayerInteractEvent.RightClickItem`) — cancels
+   equipping the elytra in the End and launching a firework in flight before the action even applies.
+2. **Equipment-change tracking** (`LivingEquipmentChangeEvent`) — catches any other way to equip
+   the elytra in the End: shift-click, dragging, dispensers, third-party mods.
+3. **Per-tick safety net** (`PlayerTickEvent.Post`) — clamps speed in the Overworld every tick,
+   and cleans up anything that slipped past the first two layers in the End.
 
-Ключевая деталь надёжности: после правки скорости серверу выставляется `player.hurtMarked = true`,
-что форсит отправку `ClientboundSetEntityMotionPacket` (тот же механизм, что у ванильного
-knockback) — клиент обязан принять серверную скорость, а не собственное предсказание. Именно
-этого не хватало в исходной версии на KubeJS, из-за чего клиент иногда «застревал» с фантомным
-полётом на секунду-другую после отмены действия сервером.
+The key reliability detail: after adjusting speed, the server sets `player.hurtMarked = true`,
+which forces a `ClientboundSetEntityMotionPacket` to be sent (the same mechanism vanilla knockback
+uses) — the client is required to accept the server's velocity instead of its own prediction. This
+is exactly what the original KubeJS version was missing, which is why the client could occasionally
+get "stuck" with a phantom flight state for a second or two after the server cancelled an action.
 
-## Лицензия
+## License
 
-Распространяется под [Apache License 2.0](LICENSE).
+Distributed under the [Apache License 2.0](LICENSE).

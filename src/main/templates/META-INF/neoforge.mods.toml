@@ -7,8 +7,8 @@ modId = "${mod_id}"
 version = "${mod_version}"
 displayName = "${mod_name}"
 authors = "${mod_authors}"
-description = '''Серверный мод управления элитрами по измерениям (Край / Обычный мир / Ад).'''
-# Чисто серверный мод: ванильные клиенты и клиенты без мода могут подключаться.
+description = '''Server-side per-dimension elytra control mod (End / Overworld / Nether).'''
+# Server-only mod: vanilla clients and clients without the mod can connect.
 displayTest = "IGNORE_ALL_VERSION"
 
 [[dependencies."${mod_id}"]]
@@ -25,7 +25,7 @@ versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
 
-# betterend — необязательная зависимость: её элитры матчатся по id и при отсутствии мода просто не существуют.
+# betterend — optional dependency: its elytras are matched by id and simply don't exist if the mod is absent.
 [[dependencies."${mod_id}"]]
 modId = "betterend"
 type = "optional"
