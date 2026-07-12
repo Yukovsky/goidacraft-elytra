@@ -23,5 +23,4 @@ out/
 *.log
 
 # Local editor/session state
-.claude/
 memory/
